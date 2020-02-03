@@ -10,6 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
 from flask_mail import Message
+from threading import Thread
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
@@ -26,9 +27,14 @@ app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-
 app.config['FIRSTFLASK_MAIL_SUBJECT_PREFIX'] = '[FirstFlask]'
-app.config['FIRSTFLASK_MAIL_SENDER'] = 'FirstFlask Admin <anatharenator@gmail.com>'
+app.config['FIRSTFLASK_MAIL_SENDER'] = 'FirstFlask Admin anatharenator@gmail.com'
+app.config['FIRSTFLASK_ADMIN'] = os.environ.get('FIRSTFLASK_ADMIN')
+
+
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
 
 
 def send_email(to, subject, template, **kwargs):
@@ -36,7 +42,9 @@ def send_email(to, subject, template, **kwargs):
         sender=app.config['FIRSTFLASK_MAIL_SENDER'], recipients=[to])
     msg.body = render_template(template + '.txt', **kwargs)
     msg.html = render_template(template + '.html', **kwargs)
-    mail.send(msg)
+    thr = Thread(target=send_async_email, args=[app, msg])
+    thr.start()
+    return thr
 
 
 @app.shell_context_processor
